@@ -1,7 +1,13 @@
+#![deny(clippy::print_stdout)]
+#![deny(clippy::print_stderr)]
+
 use anyhow::Result;
 use lapce_plugin::{
     psp_types::{
-        lsp_types::{request::Initialize, DocumentFilter, DocumentSelector, InitializeParams, Url, MessageType},
+        lsp_types::{
+            request::Initialize, DocumentFilter, DocumentSelector, InitializeParams, MessageType,
+            Url,
+        },
         Request,
     },
     register_plugin, LapcePlugin, VoltEnvironment, PLUGIN_RPC,
@@ -15,11 +21,8 @@ register_plugin!(State);
 
 fn initialize(params: InitializeParams) -> Result<()> {
     let document_selector: DocumentSelector = vec![DocumentFilter {
-        // lsp language id
-        language: Some(String::from("language_id")),
-        // glob pattern
-        pattern: Some(String::from("**/*.{ext1,ext2}")),
-        // like file:
+        language: Some(String::from("tex")),
+        pattern: Some(String::from("**/*.{tex,sty,cls,bib}")),
         scheme: None,
     }];
     let mut server_args = vec![];
@@ -34,14 +37,10 @@ fn initialize(params: InitializeParams) -> Result<()> {
         if let Some(lsp) = options.get("lsp") {
             if let Some(args) = lsp.get("serverArgs") {
                 if let Some(args) = args.as_array() {
-                    if !args.is_empty() {
-                        server_args = vec![];
-                    }
-                    for arg in args {
-                        if let Some(arg) = arg.as_str() {
-                            server_args.push(arg.to_string());
-                        }
-                    }
+                    server_args = args
+                        .iter()
+                        .filter_map(|arg| arg.as_str().map(ToString::to_string))
+                        .collect();
                 }
             }
 
@@ -62,39 +61,8 @@ fn initialize(params: InitializeParams) -> Result<()> {
         }
     }
 
-    // Architecture check
-    let _ = match VoltEnvironment::architecture().as_deref() {
-        Ok("x86_64") => "x86_64",
-        Ok("aarch64") => "aarch64",
-        _ => return Ok(()),
-    };
-
-    // OS check
-    let _ = match VoltEnvironment::operating_system().as_deref() {
-        Ok("macos") => "macos",
-        Ok("linux") => "linux",
-        Ok("windows") => "windows",
-        _ => return Ok(()),
-    };
-
-    // Download URL
-    // let _ = format!("https://github.com/<name>/<project>/releases/download/<version>/{filename}");
-
-    // see lapce_plugin::Http for available API to download files
-
-    let _ = match VoltEnvironment::operating_system().as_deref() {
-        Ok("windows") => {
-            format!("{}.exe", "[filename]")
-        }
-        _ => "[filename]".to_string(),
-    };
-
-    // Plugin working directory
-    let volt_uri = VoltEnvironment::uri()?;
-    let server_uri = Url::parse(&volt_uri)?.join("[filename]")?;
-
     // if you want to use server from PATH
-    // let server_uri = Url::parse(&format!("urn:{filename}"))?;
+    let server_uri = Url::parse(&format!("urn:texlab"))?;
 
     // Available language IDs
     // https://github.com/lapce/lapce/blob/HEAD/lapce-proxy/src/buffer.rs#L173
@@ -115,7 +83,10 @@ impl LapcePlugin for State {
             Initialize::METHOD => {
                 let params: InitializeParams = serde_json::from_value(params).unwrap();
                 if let Err(e) = initialize(params) {
-                    PLUGIN_RPC.window_show_message(MessageType::ERROR, format!("plugin returned with error: {e}"))
+                    PLUGIN_RPC.window_show_message(
+                        MessageType::ERROR,
+                        format!("plugin returned with error: {e}"),
+                    )
                 }
             }
             _ => {}

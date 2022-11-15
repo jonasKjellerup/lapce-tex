@@ -1,25 +1,38 @@
-name = "<plugin-name>"
+name = "lapce-tex"
 version = "0.0.0"
-author = "<your name>"
-display-name = "<plugin-display-name>"
-description = "<plugin-description>"
-wasm = "bin/<plugin-name>.wasm"
+author = "Jonas Kjellerup"
+display-name = "TeX (TexLab)"
+description = "A TeX plugin for lapce using texlab LSP"
+wasm = "bin/lapce-tex.wasm"
 
 [activation]
-language = []
-workspace-contains = []
+language = ["latex"]
+workspace-contains = [
+  "*/*.tex",
+  "*/*.sty",
+  "*/*.cls",
+  "*/*.bib",
+]
 
 [config."volt.serverPath"]
-default = ""
-description = "Path to custom LSP executable"
+default = "texlab"
+description = "Path to texlab executable"
 
-# [config."volt.serverArgs"]
-# default = []
-# description = ""
+[config."texlab.build.executable"]
+default = "latexmk"
+description = "The executable texlab will use to build the project"
 
-# [config."lspSettingArray"]
-# default = []
-# description = ""
+[config."texlab.build.args"]
+default = []
+description = "Arguments to pass to build tool."
+
+[config."texlab.build.onSave"]
+default = false
+description = "Whether the project should be built on save."
+
+[config."texlab.auxDirectory"]
+default = "."
+description = "The directory that build artifacts will be stored in."
 
 # [config."lspSettingString"]
 # default = ""
